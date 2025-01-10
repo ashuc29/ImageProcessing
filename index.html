@@ -1,22 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .btn {
+            margin-top: 20px;
+        }
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
 </head>
-<style>
-.btn {
-    margin-top: 30px;
-}
-</style>
 <body>
     <h1>Upload an Image</h1>
-    <form action="https://5pkek0xfii.execute-api.eu-west-1.amazonaws.com/dev/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="image" accept="image/*" required>
-       <div class="btn">
-        <button type="submit">Submit</button>
-       </div> 
-    </form>
+    <input type="file" id="fileInput" accept="image/*" required>
+    <div class="btn">
+        <button id="uploadButton">Upload</button>
+    </div>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('uploadButton').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput');
+            const messageDiv = document.getElementById('message');
+
+            // Ensure a file is selected
+            if (!fileInput.files.length) {
+                messageDiv.textContent = "Please select an image to upload.";
+                messageDiv.style.color = "red";
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            // Convert file to base64
+            const base64File = await fileToBase64(file);
+
+            // API endpoint
+            const apiUrl = "https://5pkek0xfii.execute-api.eu-west-1.amazonaws.com/dev/upload";
+
+            // Prepare request
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": file.type,
+                        "x-file-name": file.name
+                    },
+                    body: base64File
+                });
+
+                const result = await response.json();
+
+                // Handle response
+                if (response.ok) {
+                    messageDiv.textContent = `Success: ${result.message}`;
+                    messageDiv.style.color = "green";
+                } else {
+                    messageDiv.textContent = `Error: ${result.error || "Failed to upload the file."}`;
+                    messageDiv.style.color = "red";
+                }
+            } catch (error) {
+                console.error(error);
+                messageDiv.textContent = "Error: Something went wrong.";
+                messageDiv.style.color = "red";
+            }
+        });
+
+        // Helper function to convert file to Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(",")[1]); // Remove the "data:*/*;base64," prefix
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
 </body>
 </html>
